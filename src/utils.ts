@@ -11,7 +11,7 @@ export async function setTime(editor: vscode.TextEditor, time: string) {
   }
   await editor.edit((edit) => {
     const lineObj = editor.document.lineAt(line)
-    if (lineObj.text.trim().match(/^\[@?[\d:.]+\]$/)) {
+    if (parseTime(lineObj.text)) {
       edit.replace(lineObj.range, `[${time}]`)
     } else {
       edit.replace(new vscode.Range(line, 0, line, 0), `[${time}]\n`)
@@ -30,5 +30,14 @@ export async function setTime(editor: vscode.TextEditor, time: string) {
     } else {
       found = true
     }
+  }
+}
+
+export function parseTime(text: string) {
+  const m = text.trim().match(/^\[@?([\d:.]+)\]$/)
+  if (m) {
+    return { seconds: +m[1] }
+  } else {
+    return null
   }
 }

@@ -24,6 +24,8 @@
       const timeInput = document.getElementById('time')
       let currentFile
       let playing
+      let segments
+      let lastNotifiedSegmentKey
 
       playButton.disabled = true
       pauseButton.disabled = true
@@ -51,52 +53,120 @@
 
       window.addEventListener('message', (event) => {
         const message = event.data
+        console.log('Received message:', message.type)
         switch (message.type) {
-          case 'triggerTimeInsert': {
+          case 'insertTime': {
             statusText.innerText = 'Inserting time...'
             vscode.postMessage({
-              type: 'timeInsert',
+              type: 'setTimeInDocument',
               time: (+timeInput.value).toFixed(2),
             })
+            break
+          }
+          case 'jump': {
+            jumpOrSeek((t) => message.time)
+            break
+          }
+          case 'seek': {
+            jumpOrSeek((t) => t + message.delta)
+            break
+          }
+          case 'playPause': {
+            playPause()
+            break
+          }
+          case 'registerSegments': {
+            segments = {
+              times: message.times,
+              id: message.id,
+            }
+            updateActiveSegment()
+            break
           }
         }
       })
 
-      playButton.addEventListener('click', () => {
-        const source = context.createBufferSource()
-        source.buffer = currentFile
-        source.connect(context.destination)
-        const startTime = context.currentTime
-        const offset = Math.max(0, +timeInput.value || 0)
-        source.start(context.currentTime, offset)
-        playing = {
-          source,
-          startTime,
-          offset,
-          interval: setInterval(() => {
-            timeInput.value = (
-              context.currentTime -
-              startTime +
-              offset
-            ).toFixed(2)
-          }, 16),
-          stop: () => {
-            source.stop()
-            clearInterval(playing.interval)
-            timeInput.value = (
-              context.currentTime -
-              startTime +
-              offset
-            ).toFixed(2)
-          },
+      function playPause() {
+        if (playing) {
+          playing.stop()
+          playing = null
+        } else if (currentFile) {
+          const source = context.createBufferSource()
+          source.buffer = currentFile
+          source.connect(context.destination)
+          const startTime = context.currentTime
+          const offset = Math.max(0, +timeInput.value || 0)
+          source.start(context.currentTime, offset)
+          playing = {
+            source,
+            startTime,
+            offset,
+            interval: setInterval(() => {
+              timeInput.value = (
+                context.currentTime -
+                startTime +
+                offset
+              ).toFixed(2)
+              updateActiveSegment()
+            }, 16),
+            stop: () => {
+              source.stop()
+              clearInterval(playing.interval)
+              timeInput.value = (
+                context.currentTime -
+                startTime +
+                offset
+              ).toFixed(2)
+              updateActiveSegment()
+            },
+          }
         }
         updateUI()
+      }
+
+      playButton.addEventListener('click', () => {
+        playPause()
       })
 
       pauseButton.addEventListener('click', () => {
-        playing.stop()
-        playing = null
-        updateUI()
+        playPause()
+      })
+
+      function jumpOrSeek(f) {
+        if (playing) {
+          playPause()
+        }
+        timeInput.value = f(+timeInput.value || 0).toFixed(2)
+        updateActiveSegment()
+        playPause()
+      }
+
+      function updateActiveSegment() {
+        if (!segments) return
+        const time = +timeInput.value || 0
+        let began
+        for (const [i, t] of segments.times.entries()) {
+          if (time >= t) {
+            began = { index: i }
+          } else {
+            break
+          }
+        }
+        if (began) {
+          const segmentKey = segments.id + '/' + began.index
+          if (lastNotifiedSegmentKey !== segmentKey) {
+            lastNotifiedSegmentKey = segmentKey
+            vscode.postMessage({
+              type: 'setActiveSegmentIndex',
+              index: began.index,
+              id: segments.id,
+            })
+          }
+        }
+      }
+
+      timeInput.addEventListener('change', () => {
+        updateActiveSegment()
       })
     </script>
   </body>

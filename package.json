@@ -17,7 +17,27 @@
     "commands": [
       {
         "command": "subtitler.insertTime",
-        "title": "subtitler: Insert time"
+        "title": "subtitler: Insert current time"
+      },
+      {
+        "command": "subtitler.jumpToText",
+        "title": "subtitler: Jump to current text"
+      },
+      {
+        "command": "subtitler.seekForward",
+        "title": "subtitler: Seek forward"
+      },
+      {
+        "command": "subtitler.seekBackward",
+        "title": "subtitler: Seek backward"
+      },
+      {
+        "command": "subtitler.playPause",
+        "title": "subtitler: Play/Pause"
+      },
+      {
+        "command": "subtitler.generateSrt",
+        "title": "subtitler: Generate SubRip file"
       }
     ],
     "views": {
