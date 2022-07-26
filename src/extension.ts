@@ -160,7 +160,7 @@ class SubtitlerViewProvider implements vscode.WebviewViewProvider {
         ].join(' --> '),
       )
       for (const line of segment.lines) {
-        srtLines.push(line.replace(/`([^`]+)`/g, (a, x) => `<i>${x}</i>`))
+        srtLines.push(line) // .replace(/`([^`]+)`/g, (a, x) => `<i>${x}</i>`))
       }
       srtLines.push('')
     }
