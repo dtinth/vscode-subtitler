@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>subtitler</title>
+  </head>
+  <body>
+    <input type="file" id="file" />
+    <div>
+      <button id="play">Play</button>
+      <button id="pause">Pause</button>
+    </div>
+    <div>
+      <span id="status">Load a file...</span>
+    </div>
+    <div>Start time: <input type="number" id="time" step="0.01" /></div>
+
+    <script>
+      const vscode = acquireVsCodeApi()
+      const fileInput = document.getElementById('file')
+      const playButton = document.getElementById('play')
+      const pauseButton = document.getElementById('pause')
+      const statusText = document.getElementById('status')
+      const timeInput = document.getElementById('time')
+      let currentFile
+      let playing
+
+      playButton.disabled = true
+      pauseButton.disabled = true
+
+      function updateUI() {
+        playButton.disabled = !(currentFile && !playing)
+        pauseButton.disabled = !(currentFile && playing)
+      }
+
+      const context = new AudioContext()
+
+      fileInput.addEventListener('change', async (e) => {
+        statusText.innerText = 'Loading...'
+        try {
+          const file = fileInput.files[0]
+          const ab = await file.arrayBuffer()
+          const buffer = await context.decodeAudioData(ab)
+          currentFile = buffer
+          updateUI()
+        } catch (error) {
+          statusText.innerText = 'Failed: ' + error.message
+          console.error(error)
+        }
+      })
+
+      window.addEventListener('message', (event) => {
+        const message = event.data
+        switch (message.type) {
+          case 'triggerTimeInsert': {
+            statusText.innerText = 'Inserting time...'
+            vscode.postMessage({
+              type: 'timeInsert',
+              time: (+timeInput.value).toFixed(2),
+            })
+          }
+        }
+      })
+
+      playButton.addEventListener('click', () => {
+        const source = context.createBufferSource()
+        source.buffer = currentFile
+        source.connect(context.destination)
+        const startTime = context.currentTime
+        const offset = Math.max(0, +timeInput.value || 0)
+        source.start(context.currentTime, offset)
+        playing = {
+          source,
+          startTime,
+          offset,
+          interval: setInterval(() => {
+            timeInput.value = (
+              context.currentTime -
+              startTime +
+              offset
+            ).toFixed(2)
+          }, 16),
+          stop: () => {
+            source.stop()
+            clearInterval(playing.interval)
+            timeInput.value = (
+              context.currentTime -
+              startTime +
+              offset
+            ).toFixed(2)
+          },
+        }
+        updateUI()
+      })
+
+      pauseButton.addEventListener('click', () => {
+        playing.stop()
+        playing = null
+        updateUI()
+      })
+    </script>
+  </body>
+</html>
