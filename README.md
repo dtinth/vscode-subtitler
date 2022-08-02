@@ -19,3 +19,13 @@ It provides a rudimentary Vorbis audio player to help with synchronization.
     "editor.rulers": [42]
   }
   ```
+
+- Assign keyboard shortcuts to the following commands:
+
+  - subtitler: Insert current time
+  - subtitler: Jump to current text
+  - subtitler: Seek forward
+  - subtitler: Seek backward
+  - subtitler: Play/Pause
+
+- Convert your video to an OGG audio file (extension is `.oga`) and load it up in the player.
