@@ -125,7 +125,6 @@ class SubtitlerViewProvider implements vscode.WebviewViewProvider {
       return
     }
     const vttLines: string[] = ['WEBVTT', '']
-    let nextNumber = 1
     for (const segment of this._segments) {
       if (
         !segment.endTime ||
@@ -150,8 +149,9 @@ class SubtitlerViewProvider implements vscode.WebviewViewProvider {
           milliseconds.toString().padStart(3, '0'),
         ].join('')
       }
-      const offset = 0.1
-      const gap = 0.067
+      const configuration = vscode.workspace.getConfiguration('subtitler')
+      const offset = configuration.get<number>('offset', 0)
+      const gap = configuration.get<number>('gap', 0)
       vttLines.push(
         [
           formatWebVttTime(segment.startTime - offset),
@@ -236,6 +236,20 @@ export function refresh(
                 contentText: ` — ${cps} CPS`,
                 color: '#8b8685',
               },
+            }
+            if (segment.endTime < segment.startTime) {
+              diagnostics.push({
+                severity: vscode.DiagnosticSeverity.Error,
+                range: lineOfText.range,
+                message: 'Timestamp is out-of-order',
+              })
+            }
+            if (cps > 20) {
+              diagnostics.push({
+                severity: vscode.DiagnosticSeverity.Warning,
+                range: lineOfText.range,
+                message: 'Too many characters per second',
+              })
             }
           }
         },

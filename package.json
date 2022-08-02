@@ -48,6 +48,21 @@
           "name": "subtitler"
         }
       ]
+    },
+    "configuration": {
+      "title": "Subtitler",
+      "properties": {
+        "subtitler.offset": {
+          "type": "number",
+          "default": -0.1,
+          "description": "Specifies the number of seconds to shift all generated timestamps"
+        },
+        "subtitler.gap": {
+          "type": "number",
+          "default": 0.067,
+          "description": "Specifies the number of seconds of gap to leave in between cues"
+        }
+      }
     }
   },
   "scripts": {
