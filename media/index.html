@@ -5,15 +5,15 @@
     <title>subtitler</title>
   </head>
   <body>
-    <input type="file" id="file" />
+    <input type="file" id="file" accept=".oga,audio/ogg" />
     <div>
       <button id="play">Play</button>
       <button id="pause">Pause</button>
     </div>
     <div>
-      <span id="status">Load a file...</span>
+      <span id="status">Load an oga file...</span>
     </div>
-    <div>Start time: <input type="number" id="time" step="0.01" /></div>
+    <div>Time: <input type="number" id="time" step="0.01" /></div>
 
     <script>
       const vscode = acquireVsCodeApi()
