@@ -7,7 +7,7 @@ interface Resources {
   collection: vscode.DiagnosticCollection
   decorationType: vscode.TextEditorDecorationType
   activeDecorationType: vscode.TextEditorDecorationType
-  setSegments: (segments: SubtitleSegment[]) => void
+  setSegments: (segments: SubtitleSegment[], uri: vscode.Uri) => void
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -35,8 +35,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('subtitler.playPause', async () => {
       provider.postMessage({ type: 'playPause' })
     }),
-    vscode.commands.registerCommand('subtitler.generateSrt', async () => {
-      provider.generateSrt()
+    vscode.commands.registerCommand('subtitler.generateVtt', async () => {
+      provider.generateVtt()
     }),
   )
   subscribeToDocumentChanges(context, {
@@ -49,8 +49,8 @@ export function activate(context: vscode.ExtensionContext) {
       fontWeight: 'bold',
       backgroundColor: '#8b868577',
     }),
-    setSegments: (segments) => {
-      provider.publishSegments(segments)
+    setSegments: (segments, uri) => {
+      provider.publishSegments(segments, uri)
     },
   })
 }
@@ -60,6 +60,7 @@ class SubtitlerViewProvider implements vscode.WebviewViewProvider {
 
   private _view?: vscode.WebviewView
   private _segments: SubtitleSegment[] | undefined
+  private _uri: vscode.Uri | undefined
   private _registrationId = 0
   private _nextRegistrationId = 1
 
@@ -119,11 +120,11 @@ class SubtitlerViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  async generateSrt() {
-    if (!this._segments) {
+  async generateVtt() {
+    if (!this._segments || !this._uri) {
       return
     }
-    const srtLines: string[] = []
+    const vttLines: string[] = ['WEBVTT', '']
     let nextNumber = 1
     for (const segment of this._segments) {
       if (
@@ -133,9 +134,7 @@ class SubtitlerViewProvider implements vscode.WebviewViewProvider {
       ) {
         continue
       }
-      const number = nextNumber++
-      srtLines.push(`${number}`)
-      const formatSrtTime = (ts: number) => {
+      const formatWebVttTime = (ts: number) => {
         // Format is HH:MM:SS,mmm
         const hours = Math.floor(ts / 3600)
         const minutes = Math.floor((ts % 3600) / 60)
@@ -147,32 +146,33 @@ class SubtitlerViewProvider implements vscode.WebviewViewProvider {
           minutes.toString().padStart(2, '0'),
           ':',
           seconds.toString().padStart(2, '0'),
-          ',',
+          '.',
           milliseconds.toString().padStart(3, '0'),
         ].join('')
       }
       const offset = 0.1
       const gap = 0.067
-      srtLines.push(
+      vttLines.push(
         [
-          formatSrtTime(segment.startTime - offset),
-          formatSrtTime(segment.endTime - offset - gap),
+          formatWebVttTime(segment.startTime - offset),
+          formatWebVttTime(segment.endTime - offset - gap),
         ].join(' --> '),
       )
       for (const line of segment.lines) {
-        srtLines.push(line) // .replace(/`([^`]+)`/g, (a, x) => `<i>${x}</i>`))
+        vttLines.push(line.replace(/`([^`]+)`/g, (a, x) => `<i>${x}</i>`))
       }
-      srtLines.push('')
+      vttLines.push('')
     }
-    const srtDoc = await vscode.workspace.openTextDocument({
-      language: 'plaintext',
-      content: srtLines.join('\n'),
+    const file = this._uri.with({
+      path: this._uri.path.replace(/(?:\.txt)?$/, '.vtt'),
     })
-    await vscode.window.showTextDocument(srtDoc)
+    await vscode.workspace.fs.writeFile(file, Buffer.from(vttLines.join('\n')))
+    await vscode.window.showTextDocument(file)
   }
 
-  publishSegments(segments: SubtitleSegment[]) {
+  publishSegments(segments: SubtitleSegment[], uri: vscode.Uri) {
     this._segments = segments
+    this._uri = uri
     this._registrationId = this._nextRegistrationId++
     this.postMessage({
       type: 'registerSegments',
@@ -267,7 +267,7 @@ export function refresh(
   }
   collection.set(doc.uri, diagnostics)
   editor.setDecorations(decorationType, decorations)
-  setSegments(segments)
+  setSegments(segments, doc.uri)
 }
 
 export function subscribeToDocumentChanges(
