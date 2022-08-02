@@ -2,8 +2,11 @@
 
 An extension to help me create subtitle files in VS Code.
 
-- Use its own plain text file format, which then can be converted into SRT files.
-- Supports loading and playing a Vorbis audio track to help with synchronization.
+This extension is not an editor for common subtitle formats which supports many different features. Instead, it has its own opinionated format, which can then be converted into WebVTT files.
+
+- Instead of each cue having a start time and end times, they only have start time and then replaced by another cue. To clear the subtitle, is to create a cue with blank text. This means we assume that cues do not overlap.
+
+It provides a rudimentary Vorbis audio player to help with synchronization.
 
 ## Setup
 
